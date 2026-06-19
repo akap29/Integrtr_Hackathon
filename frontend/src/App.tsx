@@ -1,0 +1,1 @@
+export default function App(){return <h1>Employee Onboarding Starter</h1>}

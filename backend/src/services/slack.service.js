@@ -1,10 +1,10 @@
-const {
-    SLACK_BOT_TOKEN,
-    EMPLOYEE_WEBHOOK_URL,
-    HR_WEBHOOK_URL,
-    TEAM_CHANNEL_ID,
-    SF_BASE_URL,
-  } = require("../config/slack");
+import {
+  SLACK_BOT_TOKEN,
+  EMPLOYEE_WEBHOOK_URL,
+  HR_WEBHOOK_URL,
+  TEAM_CHANNEL_ID,
+  SF_BASE_URL,
+} from "../config/slack.js";
   
   function buildSuccessFactorsLink(employeeId) {
     return `${SF_BASE_URL}/sf/hrmd?selectedModule=Employee&userId=${encodeURIComponent(
@@ -12,24 +12,24 @@ const {
     )}`;
   }
   
-  async function postToSlackAPI(payload) {
-    const response = await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
-      },
-      body: JSON.stringify(payload),
-    });
-  
-    const data = await response.json();
-  
-    if (!response.ok || !data.ok) {
-      throw new Error(`Slack API error: ${data.error || response.statusText}`);
-    }
-  
-    return data;
+async function postToSlackAPI(payload) {
+  const response = await fetch("https://slack.com/api/chat.postMessage", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(`Slack API error: ${data.error || response.statusText}`);
   }
+
+  return data;
+}
   
   async function postToWebhook(webhookUrl, payload) {
     const response = await fetch(webhookUrl, {
@@ -101,7 +101,7 @@ const {
     return postToSlackAPI(payload);
   }
   
-  async function sendHROnboardingConfirmation(employee) {
+async function sendHrNotificationMessage(employee) {
     const {
       fullName,
       employeeId,
@@ -171,23 +171,19 @@ const {
       ],
     };
   
-    return postToWebhook(HR_WEBHOOK_URL, payload);
-  }
+  return postToWebhook(HR_WEBHOOK_URL, payload);
+}
   
-  async function sendOnboardingNotifications(employeeData) {
-    const [teamMessage, hrNotification] = await Promise.all([
-      sendTeamWelcomeMessage(employeeData),
-      sendHROnboardingConfirmation(employeeData),
-    ]);
-  
-    return {
-      teamMessage,
-      hrNotification,
-    };
-  }
-  
-  module.exports = {
-    sendOnboardingNotifications,
-    sendTeamWelcomeMessage,
-    sendHROnboardingConfirmation,
+async function sendOnboardingNotifications(employeeData) {
+  const [teamMessage, hrNotification] = await Promise.all([
+    sendTeamWelcomeMessage(employeeData),
+    sendHrNotificationMessage(employeeData),
+  ]);
+
+  return {
+    teamMessage,
+    hrNotification,
   };
+}
+
+export { sendOnboardingNotifications, sendTeamWelcomeMessage, sendHrNotificationMessage };

@@ -1,13 +1,10 @@
-require("dotenv").config();
+import dotenv from "dotenv";
 
-module.exports = {
-  SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
+dotenv.config();
 
-  EMPLOYEE_WEBHOOK_URL: process.env.EMPLOYEE_WEBHOOK_URL,
-  HR_WEBHOOK_URL: process.env.HR_WEBHOOK_URL,
-
-  TEAM_CHANNEL_ID: process.env.TEAM_CHANNEL_ID,
-  HR_CHANNEL_ID: process.env.HR_CHANNEL_ID,
-
-  SF_BASE_URL: process.env.SF_BASE_URL,
-};
+export const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+export const EMPLOYEE_WEBHOOK_URL = process.env.EMPLOYEE_WEBHOOK_URL;
+export const HR_WEBHOOK_URL = process.env.HR_WEBHOOK_URL;
+export const TEAM_CHANNEL_ID = process.env.TEAM_CHANNEL_ID;
+export const HR_CHANNEL_ID = process.env.HR_CHANNEL_ID;
+export const SF_BASE_URL = process.env.SF_BASE_URL;

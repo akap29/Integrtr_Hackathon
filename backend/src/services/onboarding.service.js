@@ -46,15 +46,26 @@ export async function processOnboardingToSuccessFactors(onboardingRequestId) {
       : error.message;
     onboarding.steps.sf_write.executedAt = now();
     onboarding.overallStatus = "partially_failed";
-    onboarding.retryCount += 1;
 
     await onboarding.save();
     throw error;
   }
 
+  const slackEmployeeData = {
+    fullName: `${onboarding.employee.firstName} ${onboarding.employee.lastName}`,
+    employeeId: onboarding.successFactors?.employeeId || "pending",
+    role: onboarding.employee.jobTitle || "",
+    department: onboarding.employee.department || "",
+    startDate: onboarding.employee.joiningDate
+      ? new Date(onboarding.employee.joiningDate).toLocaleDateString()
+      : "",
+    email: onboarding.employee.email || "",
+    avatarUrl: "",
+  };
+
   try {
     if (onboarding.steps.team_slack.status !== "success") {
-      await sendTeamWelcomeMessage(onboarding);
+      await sendTeamWelcomeMessage(slackEmployeeData);
 
       onboarding.steps.team_slack.status = "success";
       onboarding.steps.team_slack.error = null;
@@ -67,7 +78,6 @@ export async function processOnboardingToSuccessFactors(onboardingRequestId) {
     onboarding.steps.team_slack.error = error.message;
     onboarding.steps.team_slack.executedAt = now();
     onboarding.overallStatus = "partially_failed";
-    onboarding.retryCount += 1;
 
     await onboarding.save();
     throw error;
@@ -75,7 +85,7 @@ export async function processOnboardingToSuccessFactors(onboardingRequestId) {
 
   try {
     if (onboarding.steps.hr_slack.status !== "success") {
-      await sendHrNotificationMessage(onboarding);
+      await sendHrNotificationMessage(slackEmployeeData);
 
       onboarding.steps.hr_slack.status = "success";
       onboarding.steps.hr_slack.error = null;
@@ -88,7 +98,6 @@ export async function processOnboardingToSuccessFactors(onboardingRequestId) {
     onboarding.steps.hr_slack.error = error.message;
     onboarding.steps.hr_slack.executedAt = now();
     onboarding.overallStatus = "partially_failed";
-    onboarding.retryCount += 1;
 
     await onboarding.save();
     throw error;

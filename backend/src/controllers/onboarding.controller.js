@@ -2,7 +2,9 @@ import {
   createOnboardingRequest,
   getAllRequests,
   getRequestById,
-  retryRequest
+  retryRequest,
+  processOnboardingToSuccessFactors,
+  retryOnboardingFlow
 }
 from "../services/onboarding.service.js";
 
@@ -19,6 +21,10 @@ export const createOnboarding =
         await createOnboardingRequest(
           req.body
         );
+
+      processOnboardingToSuccessFactors(onboarding.onboardingRequestId).catch((err) => {
+        console.error("Background onboarding error:", err);
+      });
 
       res.status(201).json({
         success: true,
@@ -92,6 +98,10 @@ export const retryOnboarding =
         await retryRequest(
           req.params.id
         );
+
+      retryOnboardingFlow(data.onboardingRequestId).catch((err) => {
+        console.error("Background retry error:", err);
+      });
 
       res.json({
         success: true,

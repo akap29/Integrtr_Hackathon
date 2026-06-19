@@ -222,9 +222,7 @@ const onboardingSchema = new mongoose.Schema(
 
     type:Number,
 
-    default:0,
-
-    max:5
+    default:0
 
   }
 

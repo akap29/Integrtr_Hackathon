@@ -36,6 +36,7 @@ export function OnboardingFlow({ currentUser, onBack, onCreated }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [personal, setPersonal] = useState<PersonalDetails>(EMPTY_PERSONAL);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (step === 1) {
     return (
@@ -51,20 +52,30 @@ export function OnboardingFlow({ currentUser, onBack, onCreated }: Props) {
   }
 
   return (
-    <EmploymentDetailsForm
-      initial={EMPTY_EMPLOYMENT}
-      submitting={submitting}
-      initiatedByName={currentUser.name}
-      onBack={() => setStep(1)}
-      onSubmit={async (employment) => {
-        setSubmitting(true);
-        try {
-          const record = await startOnboarding({ ...personal, ...employment }, currentUser);
-          onCreated(record._id);
-        } finally {
-          setSubmitting(false);
-        }
-      }}
-    />
+    <div className="relative">
+      {error && (
+        <div className="bg-red-50 border-b border-red-200 text-red-800 text-sm py-3 px-6 text-center font-medium">
+          ⚠️ Error: {error}
+        </div>
+      )}
+      <EmploymentDetailsForm
+        initial={EMPTY_EMPLOYMENT}
+        submitting={submitting}
+        initiatedByName={currentUser.name}
+        onBack={() => setStep(1)}
+        onSubmit={async (employment) => {
+          setSubmitting(true);
+          setError(null);
+          try {
+            const record = await startOnboarding({ ...personal, ...employment }, currentUser);
+            onCreated(record._id);
+          } catch (err: any) {
+            setError(err.message || "Failed to create onboarding");
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+      />
+    </div>
   );
 }

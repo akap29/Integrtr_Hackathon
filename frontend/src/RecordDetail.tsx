@@ -26,7 +26,30 @@ export function RecordDetail({ recordId, onBack }: Props) {
   const [record, setRecord] = useState<OnboardingRecord | null>(null);
 
   useEffect(() => {
-    getOnboarding(recordId).then((r) => setRecord(r ?? null));
+    let active = true;
+    let timer: any;
+
+    const fetchRecord = () => {
+      getOnboarding(recordId).then((r) => {
+        if (!active) return;
+        setRecord(r ?? null);
+        if (r && (r.onboardingStatus === "pending" || r.onboardingStatus === "in_progress")) {
+          timer = setTimeout(fetchRecord, 3000);
+        }
+      }).catch((err) => {
+        console.error("Record detail fetch error:", err);
+        if (active) {
+          timer = setTimeout(fetchRecord, 10000);
+        }
+      });
+    };
+
+    fetchRecord();
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [recordId]);
 
   if (!record) {

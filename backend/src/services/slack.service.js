@@ -7,7 +7,8 @@ import {
 } from "../config/slack.js";
   
   function buildSuccessFactorsLink(employeeId) {
-    return `${SF_BASE_URL}/sf/hrmd?selectedModule=Employee&userId=${encodeURIComponent(
+    const uiBase = process.env.SF_UI_URL || "https://salesdemo.successfactors.eu";
+    return `${uiBase}/sf/hrmd?selectedModule=Employee&userId=${encodeURIComponent(
       employeeId
     )}`;
   }

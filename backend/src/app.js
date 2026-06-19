@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import onboardingRoutes from "./routes/onboarding.routes.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 
@@ -26,5 +27,7 @@ app.use(
 	"/api/onboarding",
 	onboardingRoutes
 );
+
+app.use(errorHandler);
 
 export default app;

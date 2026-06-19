@@ -31,10 +31,34 @@ export function Dashboard({ onStartNew, onOpenRecord }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listOnboardings().then((data) => {
-      setRecords(data);
-      setLoading(false);
-    });
+    let active = true;
+    let timer: any;
+
+    const fetchRecords = () => {
+      listOnboardings().then((data) => {
+        if (!active) return;
+        setRecords(data);
+        setLoading(false);
+        const hasActive = data.some(
+          (r) => r.onboardingStatus === "pending" || r.onboardingStatus === "in_progress"
+        );
+        if (hasActive) {
+          timer = setTimeout(fetchRecords, 5000);
+        }
+      }).catch((err) => {
+        console.error("Dashboard list error:", err);
+        if (active) {
+          timer = setTimeout(fetchRecords, 10000);
+        }
+      });
+    };
+
+    fetchRecords();
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const total = records.length;

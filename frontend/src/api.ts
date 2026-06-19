@@ -1,176 +1,211 @@
 // api.ts
-// Thin service layer. Replace the mock bodies with real fetch/axios calls to
-// POST /api/onboarding, GET /api/onboarding, GET /api/onboarding/:id,
-// POST /api/onboarding/:id/retry once the Express endpoints are live.
+// Real API calls to the Express endpoints.
 
-import { OnboardingRecord, EmployeeIntake, StepState } from "./types";
+import { OnboardingRecord, EmployeeIntake } from "./types";
 
-const emptyStep = (): StepState => ({
-  status: "pending",
-  completedAt: null,
-  error: null,
-  slackTs: null,
-});
+function mapBackendToFrontend(backendDoc: any): OnboardingRecord {
+  const employee = backendDoc.employee || {};
+  const hr = backendDoc.hr || {};
+  const steps = backendDoc.steps || {};
+  const sf = backendDoc.successFactors || {};
 
-let MOCK_DB: OnboardingRecord[] = [
-  {
-    _id: "1",
-    requestId: "ONB-20260619-001",
-    employeeKey: "john.doe@company.com",
-    initiatedBy: { userId: "abhay", name: "Abhay Sharma", email: "abhay@company.com" },
-    initiatedAt: "2026-06-19T09:12:00Z",
+  const formatGender = (g: string) => {
+    if (!g) return "";
+    const gl = g.toLowerCase();
+    if (gl === "male") return "Male";
+    if (gl === "female") return "Female";
+    if (gl === "other") return "Other";
+    return g;
+  };
+
+  const formatMarital = (m: string) => {
+    if (!m) return "";
+    return m.charAt(0).toUpperCase() + m.slice(1).toLowerCase();
+  };
+
+  const fmtDateString = (d: any) => {
+    if (!d) return "";
+    return new Date(d).toISOString().split("T")[0];
+  };
+
+  const events: any[] = [];
+  if (steps.sf_write && steps.sf_write.status !== "pending") {
+    events.push({
+      step: "sfWrite",
+      status: steps.sf_write.status,
+      timestamp: steps.sf_write.executedAt || new Date().toISOString(),
+      message: steps.sf_write.status === "success" ? "Employee created in SF" : `SuccessFactors error: ${steps.sf_write.error || "Unknown error"}`
+    });
+  }
+  if (steps.team_slack && steps.team_slack.status !== "pending") {
+    events.push({
+      step: "teamSlack",
+      status: steps.team_slack.status,
+      timestamp: steps.team_slack.executedAt || new Date().toISOString(),
+      message: steps.team_slack.status === "success" ? "Welcome message sent" : `Slack API error: ${steps.team_slack.error || "Unknown error"}`
+    });
+  }
+  if (steps.hr_slack && steps.hr_slack.status !== "pending") {
+    events.push({
+      step: "hrSlack",
+      status: steps.hr_slack.status,
+      timestamp: steps.hr_slack.executedAt || new Date().toISOString(),
+      message: steps.hr_slack.status === "success" ? "HR notified" : `Slack API error: ${steps.hr_slack.error || "Unknown error"}`
+    });
+  }
+
+  const nextRetryStep = backendDoc.overallStatus === "completed" ? null : 
+    (steps.sf_write?.status !== "success" ? "sfWrite" :
+     steps.team_slack?.status !== "success" ? "teamSlack" :
+     steps.hr_slack?.status !== "success" ? "hrSlack" : null);
+
+  return {
+    _id: backendDoc._id,
+    requestId: backendDoc.onboardingRequestId,
+    employeeKey: employee.email || "",
+    initiatedBy: {
+      userId: hr.email ? hr.email.split("@")[0] : "hr",
+      name: hr.name || "",
+      email: hr.email || ""
+    },
+    initiatedAt: backendDoc.initiatedAt || backendDoc.createdAt || new Date().toISOString(),
     employee: {
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@company.com",
-      gender: "Male",
-      dob: "1996-03-14",
-      country: "IN",
-      maritalStatus: "Single",
-      nationalId: "IN-4471-2290",
-      address: "204 Lake View Residency, Pune, MH",
-      jobTitle: "Software Engineer",
-      department: "Engineering",
-      startDate: "2026-06-20",
-      hrName: "Abhay Sharma",
-      hrEmail: "abhay@company.com",
+      firstName: employee.firstName || "",
+      lastName: employee.lastName || "",
+      email: employee.email || "",
+      gender: formatGender(employee.gender || ""),
+      dob: fmtDateString(employee.dateOfBirth),
+      country: employee.nationality || "",
+      maritalStatus: formatMarital(employee.maritalStatus || ""),
+      nationalId: employee.nationalId || "",
+      address: "",
+      jobTitle: employee.jobTitle || "",
+      department: employee.department || "",
+      startDate: fmtDateString(employee.joiningDate),
+      hrName: hr.name || "",
+      hrEmail: hr.email || ""
     },
     successFactors: {
-      personIdExternal: "100045",
-      userId: "100045",
-      employmentId: "100045",
-      deepLink: "https://tenant.successfactors.com/employee/100045",
-      createdAt: "2026-06-19T09:13:10Z",
+      personIdExternal: sf.employeeId || null,
+      userId: sf.employeeId || null,
+      employmentId: sf.employeeId || null,
+      deepLink: sf.profileUrl || null,
+      createdAt: steps.sf_write?.executedAt || null
     },
     steps: {
-      sfWrite: { status: "success", completedAt: "2026-06-19T09:13:10Z", error: null },
-      teamSlack: { status: "success", completedAt: "2026-06-19T09:13:14Z", error: null, slackTs: "1718901234.111" },
-      hrSlack: { status: "failed", completedAt: null, error: "channel_not_found" },
+      sfWrite: {
+        status: steps.sf_write?.status || "pending",
+        completedAt: steps.sf_write?.executedAt || null,
+        error: steps.sf_write?.error || null
+      },
+      teamSlack: {
+        status: steps.team_slack?.status || "pending",
+        completedAt: steps.team_slack?.executedAt || null,
+        error: steps.team_slack?.error || null
+      },
+      hrSlack: {
+        status: steps.hr_slack?.status || "pending",
+        completedAt: steps.hr_slack?.executedAt || null,
+        error: steps.hr_slack?.error || null
+      }
     },
-    onboardingStatus: "partially_completed",
-    retryCount: 1,
-    lastRetryAt: "2026-06-19T09:20:00Z",
-    nextRetryStep: "hrSlack",
-    events: [
-      { step: "sfWrite", status: "success", timestamp: "2026-06-19T09:13:10Z", message: "Employee created in SF" },
-      { step: "teamSlack", status: "success", timestamp: "2026-06-19T09:13:14Z", message: "Welcome message sent" },
-      { step: "hrSlack", status: "failed", timestamp: "2026-06-19T09:13:16Z", message: "Slack API error: channel_not_found" },
-    ],
-  },
-  {
-    _id: "2",
-    requestId: "ONB-20260618-014",
-    employeeKey: "priya.menon@company.com",
-    initiatedBy: { userId: "abhay", name: "Abhay Sharma", email: "abhay@company.com" },
-    initiatedAt: "2026-06-18T14:02:00Z",
-    employee: {
-      firstName: "Priya",
-      lastName: "Menon",
-      email: "priya.menon@company.com",
-      gender: "Female",
-      dob: "1998-11-02",
-      country: "IN",
-      maritalStatus: "Married",
-      nationalId: "IN-8810-3357",
-      address: "12 Sundar Nagar, Bengaluru, KA",
-      jobTitle: "Product Designer",
-      department: "Design",
-      startDate: "2026-06-22",
-      hrName: "Abhay Sharma",
-      hrEmail: "abhay@company.com",
-    },
-    successFactors: {
-      personIdExternal: "100046",
-      userId: "100046",
-      employmentId: "100046",
-      deepLink: "https://tenant.successfactors.com/employee/100046",
-      createdAt: "2026-06-18T14:03:00Z",
-    },
-    steps: {
-      sfWrite: { status: "success", completedAt: "2026-06-18T14:03:00Z", error: null },
-      teamSlack: { status: "success", completedAt: "2026-06-18T14:03:05Z", error: null, slackTs: "1718801234.222" },
-      hrSlack: { status: "success", completedAt: "2026-06-18T14:03:08Z", error: null, slackTs: "1718801234.223" },
-    },
-    onboardingStatus: "completed",
-    retryCount: 0,
-    lastRetryAt: null,
-    nextRetryStep: null,
-    events: [
-      { step: "sfWrite", status: "success", timestamp: "2026-06-18T14:03:00Z", message: "Employee created in SF" },
-      { step: "teamSlack", status: "success", timestamp: "2026-06-18T14:03:05Z", message: "Welcome message sent" },
-      { step: "hrSlack", status: "success", timestamp: "2026-06-18T14:03:08Z", message: "HR notified" },
-    ],
-  },
-];
+    onboardingStatus: backendDoc.overallStatus === "partially_failed" ? "partially_completed" : backendDoc.overallStatus,
+    retryCount: backendDoc.retryCount || 0,
+    lastRetryAt: backendDoc.updatedAt || null,
+    nextRetryStep,
+    events
+  };
+}
 
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+function mapFrontendToBackend(employee: EmployeeIntake, initiatedBy: { name: string; email: string }) {
+  const mapGender = (g: string) => {
+    if (!g) return "other";
+    const gl = g.toLowerCase();
+    if (gl === "male") return "male";
+    if (gl === "female") return "female";
+    return "other";
+  };
+
+  const mapMarital = (m: string) => {
+    if (!m) return "single";
+    const ml = m.toLowerCase();
+    if (["single", "married", "divorced", "widowed"].includes(ml)) return ml;
+    return "single";
+  };
+
+  return {
+    employee: {
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      maritalStatus: mapMarital(employee.maritalStatus),
+      nationalId: employee.nationalId,
+      email: employee.email,
+      dateOfBirth: employee.dob,
+      gender: mapGender(employee.gender),
+      nationality: employee.country,
+      department: employee.department,
+      jobTitle: employee.jobTitle,
+      designation: employee.jobTitle,
+      joiningDate: employee.startDate
+    },
+    hr: {
+      name: initiatedBy.name,
+      email: initiatedBy.email
+    }
+  };
+}
 
 export async function listOnboardings(): Promise<OnboardingRecord[]> {
-  await delay(250);
-  return [...MOCK_DB].sort(
-    (a, b) => new Date(b.initiatedAt).getTime() - new Date(a.initiatedAt).getTime()
-  );
+  const response = await fetch("/api/onboarding");
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`);
+  }
+  const result = await response.json();
+  return (result.data || []).map(mapBackendToFrontend);
 }
 
 export async function getOnboarding(id: string): Promise<OnboardingRecord | undefined> {
-  await delay(150);
-  return MOCK_DB.find((r) => r._id === id);
+  const response = await fetch(`/api/onboarding/${id}`);
+  if (!response.ok) {
+    if (response.status === 404) return undefined;
+    throw new Error(`API error: ${response.statusText}`);
+  }
+  const result = await response.json();
+  return result.data ? mapBackendToFrontend(result.data) : undefined;
 }
 
 export async function startOnboarding(
   employee: EmployeeIntake,
   initiatedBy: { userId: string; name: string; email: string }
 ): Promise<OnboardingRecord> {
-  await delay(600);
-
-  const today = new Date();
-  const requestId = `ONB-${today.toISOString().slice(0, 10).replace(/-/g, "")}-${String(
-    MOCK_DB.length + 1
-  ).padStart(3, "0")}`;
-
-  const record: OnboardingRecord = {
-    _id: String(MOCK_DB.length + 1),
-    requestId,
-    employeeKey: employee.email,
-    initiatedBy,
-    initiatedAt: new Date().toISOString(),
-    employee,
-    successFactors: {
-      personIdExternal: null,
-      userId: null,
-      employmentId: null,
-      deepLink: null,
-      createdAt: null,
+  const payload = mapFrontendToBackend(employee, initiatedBy);
+  const response = await fetch("/api/onboarding", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
     },
-    steps: { sfWrite: emptyStep(), teamSlack: emptyStep(), hrSlack: emptyStep() },
-    onboardingStatus: "pending",
-    retryCount: 0,
-    lastRetryAt: null,
-    nextRetryStep: "sfWrite",
-    events: [],
-  };
-
-  MOCK_DB = [record, ...MOCK_DB];
-  return record;
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    let message = response.statusText;
+    try {
+      const json = JSON.parse(text);
+      if (json.message) message = json.message;
+    } catch (_) {}
+    throw new Error(`API error: ${message}`);
+  }
+  const result = await response.json();
+  return mapBackendToFrontend(result.data);
 }
 
 export async function retryStep(id: string, step: string): Promise<OnboardingRecord> {
-  await delay(500);
-  MOCK_DB = MOCK_DB.map((r) => {
-    if (r._id !== id) return r;
-    const updated: OnboardingRecord = {
-      ...r,
-      retryCount: r.retryCount + 1,
-      lastRetryAt: new Date().toISOString(),
-      steps: {
-        ...r.steps,
-        [step]: { status: "success", completedAt: new Date().toISOString(), error: null },
-      } as OnboardingRecord["steps"],
-    };
-    const allDone = Object.values(updated.steps).every((s) => s.status === "success");
-    updated.onboardingStatus = allDone ? "completed" : "partially_completed";
-    updated.nextRetryStep = allDone ? null : updated.nextRetryStep;
-    return updated;
+  const response = await fetch(`/api/onboarding/${id}/retry`, {
+    method: "POST"
   });
-  return MOCK_DB.find((r) => r._id === id) as OnboardingRecord;
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`);
+  }
+  const result = await response.json();
+  return mapBackendToFrontend(result.data);
 }

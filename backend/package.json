@@ -1,5 +1,23 @@
 {
-  "name": "employee-onboarding-backend",
-  "version": "0.0.0",
-  "private": true
+  "name": "integrtr_hackathon",
+  "version": "1.0.0",
+  "description": "SAP System",
+  "homepage": "https://github.com/akap29/Integrtr_Hackathon#readme",
+  "bugs": {
+    "url": "https://github.com/akap29/Integrtr_Hackathon/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akap29/Integrtr_Hackathon.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "mongoose": "^9.7.1"
+  }
 }

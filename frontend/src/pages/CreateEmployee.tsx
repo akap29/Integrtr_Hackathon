@@ -1,1 +1,0 @@
-export default function CreateEmployee(){return <div>Create Employee Wizard</div>}

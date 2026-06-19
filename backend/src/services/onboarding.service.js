@@ -1,5 +1,6 @@
 import EmployeeOnboarding from "../models/EmployeeOnboarding.js";
 import { createEmployeeInSuccessFactors } from "./successFactors.service.js";
+import { v4 as uuidv4 } from "uuid";
 import {
   sendTeamWelcomeMessage,
   sendHrNotificationMessage,
@@ -112,3 +113,66 @@ export async function retryOnboardingFlow(onboardingRequestId) {
 
   return processOnboardingToSuccessFactors(onboardingRequestId);
 }
+export const createOnboardingRequest = async (
+  payload
+) => {
+
+  const onboarding =
+    await EmployeeOnboarding.create({
+
+      onboardingRequestId:
+        uuidv4(),
+
+      employee:
+        payload.employee,
+
+      hr:
+        payload.hr
+
+    });
+
+  return onboarding;
+};
+
+export const getAllRequests =
+  async () => {
+
+    return EmployeeOnboarding.find()
+      .sort({
+        createdAt: -1
+      });
+
+  };
+
+export const getRequestById =
+  async (id) => {
+
+    return EmployeeOnboarding.findById(
+      id
+    );
+
+  };
+
+export const retryRequest =
+  async (id) => {
+
+    const onboarding =
+      await EmployeeOnboarding.findById(
+        id
+      );
+
+    if (!onboarding) {
+      throw new Error(
+        "Request not found"
+      );
+    }
+
+    onboarding.retryCount += 1;
+
+    onboarding.overallStatus =
+      "in_progress";
+
+    await onboarding.save();
+
+    return onboarding;
+  };

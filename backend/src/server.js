@@ -1,4 +1,14 @@
-require("dotenv").config();
-const app = require('./app')
-const port = process.env.PORT || 3000
-app.listen(port)
+import dotenv from "dotenv";
+
+dotenv.config();
+
+import app from "./app.js";
+import { connectDB } from "./config/connectDB.js";
+
+const PORT = process.env.PORT || 5000;
+
+connectDB();
+
+app.listen(PORT, () => {
+	console.log(`Server running on port ${PORT}`);
+});

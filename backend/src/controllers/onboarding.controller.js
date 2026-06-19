@@ -1,59 +1,105 @@
-import EmployeeOnboarding from "../models/EmployeeOnboarding.js";
 import {
-  processOnboardingToSuccessFactors,
-  retryOnboardingFlow,
-} from "../services/onboarding.service.js";
-
-export async function submitOnboarding(req, res) {
-  try {
-    const onboarding = await EmployeeOnboarding.create(req.body);
-    const processed = await processOnboardingToSuccessFactors(
-      onboarding.onboardingRequestId,
-    );
-
-    return res.status(201).json({
-      success: true,
-      data: processed,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+  createOnboardingRequest,
+  getAllRequests,
+  getRequestById,
+  retryRequest
 }
+from "../services/onboarding.service.js";
 
-export async function triggerOnboardingProcessing(req, res) {
-  try {
-    const { onboardingRequestId } = req.params;
-    const processed =
-      await processOnboardingToSuccessFactors(onboardingRequestId);
+export const createOnboarding =
+  async (
+    req,
+    res,
+    next
+  ) => {
 
-    return res.status(200).json({
-      success: true,
-      data: processed,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-}
+    try {
 
-export async function retryOnboarding(req, res) {
-  try {
-    const { onboardingRequestId } = req.params;
-    const processed = await retryOnboardingFlow(onboardingRequestId);
+      const onboarding =
+        await createOnboardingRequest(
+          req.body
+        );
 
-    return res.status(200).json({
-      success: true,
-      data: processed,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-}
+      res.status(201).json({
+        success: true,
+        data: onboarding
+      });
+
+    } catch (error) {
+      next(error);
+    }
+
+  };
+
+export const getAllOnboardings =
+  async (
+    req,
+    res,
+    next
+  ) => {
+
+    try {
+
+      const data =
+        await getAllRequests();
+
+      res.json({
+        success: true,
+        data
+      });
+
+    } catch (error) {
+      next(error);
+    }
+
+  };
+
+export const getOnboardingById =
+  async (
+    req,
+    res,
+    next
+  ) => {
+
+    try {
+
+      const data =
+        await getRequestById(
+          req.params.id
+        );
+
+      res.json({
+        success: true,
+        data
+      });
+
+    } catch (error) {
+      next(error);
+    }
+
+  };
+
+export const retryOnboarding =
+  async (
+    req,
+    res,
+    next
+  ) => {
+
+    try {
+
+      const data =
+        await retryRequest(
+          req.params.id
+        );
+
+      res.json({
+        success: true,
+        data
+      });
+
+    } catch (error) {
+      next(error);
+    }
+
+  };

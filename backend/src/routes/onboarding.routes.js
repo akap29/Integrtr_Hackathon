@@ -1,14 +1,24 @@
 import express from "express";
+
 import {
-  submitOnboarding,
-  triggerOnboardingProcessing,
-  retryOnboarding,
+  createOnboarding,
+  getAllOnboardings,
+  getOnboardingById,
+  retryOnboarding
 } from "../controllers/onboarding.controller.js";
+
+import { validate } from "../middleware/validate.middleware.js";
+
+import { createOnboardingSchema } from "../validations/onboarding.validation.js";
 
 const router = express.Router();
 
-router.post("/", submitOnboarding);
-router.post("/process/:onboardingRequestId", triggerOnboardingProcessing);
-router.post("/retry/:onboardingRequestId", retryOnboarding);
+router.post("/", validate(createOnboardingSchema), createOnboarding);
+
+router.get("/", getAllOnboardings);
+
+router.get("/:id", getOnboardingById);
+
+router.post("/:id/retry", retryOnboarding);
 
 export default router;
